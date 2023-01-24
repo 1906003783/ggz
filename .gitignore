@@ -1,3 +1,5 @@
 tmp/
 data/
 .vscode
+__pycache__/
+*.pyc
