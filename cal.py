@@ -1,43 +1,24 @@
-import json
-import csv
 import pandas as pd
 import numpy as np
 import pymysql
 import datetime
-from util import json2csv
+from util import json2csv,dbsrh,dbexe
+from conf import DefaultConfig
 
-col=("id","enemyname","char","charlevel","time")
+#配置
+cfg_c=DefaultConfig()
+cfg=cfg_c.cfg
+n_chara=cfg['n_chara']
+date_i=cfg["date_i"]
+mysql=cfg["mysql"]["config"]
+
+col=tuple(cfg["col"])
 
 json2csv("data/m.json","data/rlt.csv",col=col)
 json2csv("data/i.json","data/rlt.csv",col=col,mode="a+")
 
-    
-#插入函数
-def dbexe(db,cursor,sql):
-    try:
-    # 执行sql语句
-        cursor.execute(sql)
-   # 提交到数据库执行
-        db.commit()
-    except pymysql.InternalError as e:
-   # 如果发生错误则回滚
-        db.rollback()
-
-#查询函数
-def dbsrh(db,cursor,sql):
-    try:
-    # 执行sql语句
-        cursor.execute(sql)
-   # 提交到数据库执行
-        result=cursor.fetchall()
-        return result
-    except pymysql.InternalError as e:
-        code, message = e.args
-        print (">>>>>>>>>>>>>", code, message)
-        return
-
 #连接数据库    
-db=pymysql.connect(host="localhost",user="root",password="Hts*9527",database="ggz",local_infile=True)
+db=pymysql.connect(host=mysql["host"],user=mysql["user"],password=mysql["password"],database=mysql["database"],local_infile=True)
 cursor=db.cursor()
 
 sql="load data local infile \"E:/cal/data/rlt.csv\" into table record character set utf8  fields terminated by ','  lines terminated by '\r\n'   ignore 1 lines;"
@@ -45,11 +26,9 @@ dbexe(db,cursor,sql)
 sql="delete from record where chara=\"野\";"
 dbexe(db,cursor,sql)
 
-n_chara=10
 df=pd.read_csv("data/SSS.csv",encoding="utf-8")
-pd.set_option('display.max_columns',None)
+#pd.set_option('display.max_columns',None)
 name=[c for c in df.columns]
-date_i=[2023,1,19]
 date_t=datetime.date(date_i[0],date_i[1],date_i[2])
 
 sql="SELECT * FROM cnt;"
