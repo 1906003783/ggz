@@ -1,76 +1,100 @@
-import pandas as pd
-import numpy as np
-import pymysql
-import datetime
-from util import json2csv,dbsrh,dbexe
-from conf import DefaultConfig
-
-#配置
-cfg_c=DefaultConfig()
-cfg=cfg_c.cfg
-n_chara=cfg['n_chara']
-date_i=cfg["date_i"]
-mysql=cfg["mysql"]["config"]
-halo=cfg["halo"]
-
-col=tuple(cfg["col"])
-col_c=tuple(cfg["col_c"])
-
-json2csv("data/m.json","data/rlt.csv",d_halo=halo,col=col,col_c=col_c)
-json2csv("data/i.json","data/rlt.csv",d_halo=halo,col=col,col_c=col_c,mode="a+")
-
-#连接数据库    
-db=pymysql.connect(host=mysql["host"],user=mysql["user"],password=mysql["password"],database=mysql["database"],local_infile=True)
-cursor=db.cursor()
-
-sql="load data local infile \"E:/cal/data/rlt.csv\" into table record character set utf8  fields terminated by ','  lines terminated by '\r\n'   ignore 1 lines;"
-dbexe(db,cursor,sql)
-sql="delete from record where chara=\"野\";"
-dbexe(db,cursor,sql)
-
-df=pd.read_csv("data/SSS.csv",encoding="utf-8")
-#pd.set_option('display.max_columns',None)
-name=[c for c in df.columns]
-date_t=datetime.date(date_i[0],date_i[1],date_i[2])
-
-sql="SELECT * FROM cnt;"
-rlt= dbsrh(db,cursor,sql)
+import json
+import csv
+import re
+from bs4 import BeautifulSoup
 
 
-if rlt is not None:
-    weight=dict()
-    for r in rlt:
-        weight[r[0]]=r[1]
+def json2csv(input,out,d_halo,col=[],col_c=[],mode="w",encoding="utf-8"):
+        with open(input,'r',encoding=encoding) as f:
+            datas=json.load(f)
+            if mode=="w":
+                loader=[tuple(col+col_c)]
+            else:
+                loader=[]
+            for data in datas["data"]["data"][0]["rows"]:
+                if data["char"]=="野怪":
+                    pass
+                else:
+                    bs = BeautifulSoup(data["log"],"html.parser")
+                    l_eq=bs.find_all(name="button",attrs={"data-original-title":True},limit=8)[4:]
+                    eq=list()
+                    for e in l_eq:
+                        eq+=[e.attrs['data-original-title'],e.text ]    #装备
+                    tf=bs.find(name="div",attrs={"class":"col-md-7 fyg_tl"})    #属性
+                    w_match=re.findall("(?<=:)\d+(?=])",tf.text)
+                    halo=bs.find(name="div",attrs={"class":"col-md-5 fyg_tr"})  #光环
+                    s_halo=re.findall(r"(?<=\|)[^|]\S{3}(?=|)",halo.text)
+                    bit_h=0
+                    for h in s_halo:
+                        bit_h+=(2**d_halo[h])
+                    loader.append(tuple([data[c] for c in col]+eq+w_match+[str(s_halo)]+[bit_h]))
+            with open(out,mode=mode,newline="",encoding=encoding) as f2:
+                writer=csv.writer(f2)
+                writer.writerows(loader)
 
-# 关闭不使用的游标对象
-cursor.close()
-# 关闭数据库连接
-db.close()
 
-weight=[float(weight[(name[2*i*(n_chara+1)].strip("\t"))[0]])/sum(weight.values()) for i in range(n_chara)]
-weight=np.array(weight)
+class JsonLoader():
+    def __init__(self,inputs,d_halo,col=[],col_c=[],encoding="utf-8") -> None:
+        self.encoding=encoding
+        self.d_halo=d_halo
+        self.col=col
+        self.col_c=col_c
+        self.encoding=encoding
+        self.loader=[self.json_proc(inputs[0],d_halo,col,col_c,mode="w",encoding=encoding)]
+        for i in range(1,len(inputs)):
+            self.loader.append(self.json_proc(inputs[i],d_halo,col,col_c,mode="a+",encoding=encoding))
 
-dp=len(df.index)
-avg_i=dict()
-avg_w=dict()
-for k in range(dp):
-    c_date=date_t+datetime.timedelta(k)
-    c_date="{0}-{1}".format(c_date.month,c_date.day)
-    avg_i[c_date]=dict()
-    avg_w[c_date]=dict()
-    for i in range(n_chara*2):
-        di=[]
-        for j in range(n_chara*i+1+i,n_chara*(i+1)+1+i):
-            di.append(float(df[name[j]][k].strip('%'))/100)
-        arr=np.array(di)
-        avg_i[c_date][name[i*(n_chara+1)]]=np.mean(arr)
-        rlt=arr*weight
-        #df[name[i*(n_chara+1)]][k]=round(rlt.sum(),3)
-        avg_w[c_date][name[i*(n_chara+1)]]=round(rlt.sum(),3)
-#df.to_csv("out.csv",columns=[name[i*(n_chara+1)] for i in range(n_chara*2) ],encoding="gbk")
-avg_w=pd.DataFrame(avg_w)
-avg_w.sort_values(by=c_date,ascending=False,inplace=True)
-avg_w.to_csv("data/out_w.csv",encoding="gbk")
-avg_i=pd.DataFrame(avg_i)
-avg_i.sort_values(by=c_date,ascending=False,inplace=True)
-avg_i.to_csv("data/out_i.csv",encoding="gbk")
+    def json_add(self,input):
+        self.mode="a+"
+        ld=self.json_proc(input,d_halo=self.d_halo,col=self.col,col_c=self.col_c,mode="a+",encoding=self.encoding)
+        self.loader.append(ld)
+    
+    def json2csv(self,out):
+        with open(out,mode="w",newline="",encoding=self.encoding) as f2:
+            writer=csv.writer(f2)
+            for ld in self.loader:
+                writer.writerows(ld)
+
+    def json_proc(self,input,d_halo,col=[],col_c=[],mode="w",encoding="utf-8"):
+        self.mode=mode
+        self.encoding=encoding
+        with open(input,'r',encoding=encoding) as f:
+            datas=json.load(f)
+            if mode=="w":
+                loader=[tuple(col+col_c)]
+            else:
+                loader=[]
+            for data in datas["data"]["data"][0]["rows"]:
+                if data["char"]=="野怪":
+                    pass
+                else:
+                    bs = BeautifulSoup(data["log"],"html.parser")
+                    l_eq=bs.find_all(name="button",attrs={"data-original-title":True},limit=8)[4:]
+                    eq=list()
+                    for e in l_eq:
+                        eq+=[e.attrs['data-original-title'],e.text ]    #装备
+                    tf=bs.find(name="div",attrs={"class":"col-md-7 fyg_tl"})    #属性
+                    w_match=re.findall("(?<=:)\d+(?=])",tf.text)
+                    halo=bs.find(name="div",attrs={"class":"col-md-5 fyg_tr"})  #光环
+                    s_halo=re.findall(r"(?<=\|)[^|]\S{3}(?=|)",halo.text)
+                    bit_h=0
+                    for h in s_halo:
+                        bit_h+=(2**d_halo[h])
+                    loader.append(tuple([data[c] for c in col]+eq+w_match+[str(s_halo)]+[bit_h]))
+            return loader
+
+if __name__=="__main__":
+    from conf import DefaultConfig
+    #配置
+    cfg_c=DefaultConfig()
+    cfg=cfg_c.cfg
+    n_chara=cfg['n_chara']
+    date_i=cfg["date_i"]
+    mysql=cfg["mysql"]["config"]
+    halo=cfg["halo"]
+
+    col=tuple(cfg["col"])
+    col_c=tuple(cfg["col_c"])
+    jloader=JsonLoader(["data/m.json","data/i.json"],d_halo=halo,col=col,col_c=col_c)
+    jloader.json2csv("data/rlt.csv")
+
