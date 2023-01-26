@@ -2,6 +2,7 @@ import json
 import csv
 import re
 from bs4 import BeautifulSoup
+import sqlite3
 
 class JsonLoader():
     def __init__(self,inputs,d_halo,col=[],col_c=[],encoding="utf-8") -> None:
@@ -14,6 +15,9 @@ class JsonLoader():
         for i in range(1,len(inputs)):
             self.loader.append(self.json_proc(inputs[i],d_halo,col,col_c,mode="a+",encoding=encoding))
 
+    def export_loader(self):
+        return self.loader
+
     def json_add(self,input):
         self.mode="a+"
         ld=self.json_proc(input,d_halo=self.d_halo,col=self.col,col_c=self.col_c,mode="a+",encoding=self.encoding)
@@ -24,6 +28,27 @@ class JsonLoader():
             writer=csv.writer(f2)
             for ld in self.loader:
                 writer.writerows(ld)
+
+    def createdb(self):
+        db=sqlite3.connect(database=mysql["database"]+".db")
+        cursor=db.cursor()
+        table_name="records"
+        sql_string = f"""CREATE TABLE {table_name} ({",".join(self.loader[0][0])});"""
+        cursor.execute(sql_string)
+        db.commit()
+        db.close()
+
+    def json2db(self):
+        db=sqlite3.connect(database=mysql["database"]+".db")
+        cursor=db.cursor()
+        for ld in self.loader:
+            table_name="records"
+            cols=self.loader[0][0]
+            format_v=','.join(['?'] * len(cols))
+            sql_string = f"""INSERT INTO {table_name} ({",".join(cols)}) VALUES ({format_v});""" 
+            cursor.executemany(sql_string, self.loader[0])
+        db.commit()
+        db.close()
 
     def json_proc(self,input,d_halo,col=[],col_c=[],mode="w",encoding="utf-8"):
         self.mode=mode
@@ -65,6 +90,6 @@ if __name__=="__main__":
 
     col=tuple(cfg["col"])
     col_c=tuple(cfg["col_c"])
-    jloader=JsonLoader(["data/m.json","data/i.json"],d_halo=halo,col=col,col_c=col_c)
-    jloader.json2csv("data/rlt.csv")
+    jloader=JsonLoader(["data/f.json",],d_halo=halo,col=col,col_c=col_c)
+    jloader.json2db()
 
