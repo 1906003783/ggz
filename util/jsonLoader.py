@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import sqlite3
 
 class JsonLoader():
-    def __init__(self,inputs,d_halo,col=[],col_c=[],encoding="utf-8") -> None:
+    def __init__(self,inputs:list,d_halo:dict,col=[],col_c=[],encoding="utf-8") -> None:
         self.encoding=encoding
         self.d_halo=d_halo
         self.col=col
@@ -15,15 +15,15 @@ class JsonLoader():
         for i in range(1,len(inputs)):
             self.loader.append(self.json_proc(inputs[i],d_halo,col,col_c,mode="a+",encoding=encoding))
 
-    def export_loader(self):
+    def export_loader(self) ->list:
         return self.loader
 
-    def json_add(self,input):
+    def json_add(self,inputs:list):
         self.mode="a+"
-        ld=self.json_proc(input,d_halo=self.d_halo,col=self.col,col_c=self.col_c,mode="a+",encoding=self.encoding)
-        self.loader.append(ld)
+        for i in range(len(inputs)):
+            self.loader.append(self.json_proc(inputs[i],d_halo=self.d_halo,col=self.col,col_c=self.col_c,mode=self.mode,encoding=self.encoding))
     
-    def json2csv(self,out):
+    def json2csv(self,out:str):
         with open(out,mode="w",newline="",encoding=self.encoding) as f2:
             writer=csv.writer(f2)
             for ld in self.loader:
@@ -50,7 +50,7 @@ class JsonLoader():
         db.commit()
         db.close()
 
-    def json_proc(self,input,d_halo,col=[],col_c=[],mode="w",encoding="utf-8"):
+    def json_proc(self,input:str,d_halo:dict,col=[],col_c=[],mode="w",encoding="utf-8") ->list:
         self.mode=mode
         self.encoding=encoding
         with open(input,'r',encoding=encoding) as f:
