@@ -1,2 +1,2 @@
-conda install py368
+CALL conda activate py368
 python cal.py

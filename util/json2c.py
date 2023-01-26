@@ -27,7 +27,7 @@ def json2csv(input,out,d_halo,col=[],col_c=[],mode="w",encoding="utf-8"):
                     bit_h=0
                     for h in s_halo:
                         bit_h+=(2**d_halo[h])
-                    fcsv.append(tuple([data[c] for c in col]+eq+w_match+[s_halo]+[bit_h]))
+                    fcsv.append(tuple([data[c] for c in col]+eq+w_match+[str(s_halo)]+[bit_h]))
             with open(out,mode=mode,newline="",encoding=encoding) as f2:
                 writer=csv.writer(f2)
                 writer.writerows(fcsv)
