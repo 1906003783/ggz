@@ -46,7 +46,7 @@ class JsonLoader():
             cols=self.loader[0][0]
             format_v=','.join(['?'] * len(cols))
             sql_string = f"""INSERT INTO {table_name} ({",".join(cols)}) VALUES ({format_v});""" 
-            cursor.executemany(sql_string, self.loader[0])
+            cursor.executemany(sql_string, self.loader[0][1:])
         db.commit()
         db.close()
 
