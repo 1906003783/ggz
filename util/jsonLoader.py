@@ -2,6 +2,7 @@ import json
 import csv
 import re
 from bs4 import BeautifulSoup
+import tqdm
 
 class JsonLoader():
     def __init__(self,inputs:list,d_halo:dict,col=[],col_c=[],encoding="utf-8") -> None:
@@ -27,29 +28,7 @@ class JsonLoader():
             writer=csv.writer(f2)
             for ld in self.loader:
                 writer.writerows(ld)
-    """
-    def createdb(self):
-        db=sqlite3.connect(database=mysql["database"]+".db")
-        cursor=db.cursor()
-        table_name="records"
-        sql_string = f"""CREATE TABLE {table_name} ({",".join(self.loader[0][0])});"""
-        cursor.execute(sql_string)
-        db.commit()
-        db.close()
 
-    def json2db(self):
-        db=sqlite3.connect(database=mysql["database"]+".db")
-        cursor=db.cursor()
-        for ld in self.loader:
-            table_name="records"
-            cols=self.loader[0][0]
-            format_v=','.join(['?'] * len(cols))
-            sql_string = f"""INSERT INTO {table_name} ({",".join(cols)}) VALUES ({format_v});""" 
-            cursor.executemany(sql_string, self.loader[0][1:])
-        db.commit()
-        db.close()
-    """
-        
     def json_proc(self,input:str,d_halo:dict,col=[],col_c=[],mode="w",encoding="utf-8") ->list:
         self.mode=mode
         self.encoding=encoding
@@ -59,7 +38,7 @@ class JsonLoader():
                 loader=[tuple(col+col_c)]
             else:
                 loader=[]
-            for data in datas["data"]["data"][0]["rows"]:
+            for data in tqdm.tqdm(datas["data"]["data"][0]["rows"]):
                 if data.get("char") == "野怪":
                     pass
                 else:

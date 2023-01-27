@@ -32,12 +32,20 @@ class DBProcer():
     def __init__(self,path_db:str) -> None:
         self.path_db=path_db
 
-    def dbexe(self,sql_string:str) -> list:
+    def dbexe(self,sql_string:str) -> None:
         db=sqlite3.connect(database=self.path_db)
         cursor=db.cursor()
         cursor.execute(sql_string)
         db.commit()
         db.close()
+
+    def select(self,sql_string:str) ->list:
+        db=sqlite3.connect(database=self.path_db)
+        cursor=db.cursor()
+        cursor.execute(sql_string)
+        rsp=cursor.fetchall()
+        db.close()
+        return rsp
 
     def create_table(self,table_name:str,cols:list):
         sql_string = f"""CREATE TABLE IF NOT EXISTS {table_name} ({cols[0]+" PRIMARY KEY,"+",".join(cols[1:])});"""
@@ -61,6 +69,6 @@ class DBProcer():
         for ld in loader:
             format_v=','.join(['?'] * len(cols))
             sql_string = f"""INSERT INTO {table_name} ({",".join(cols)}) VALUES ({format_v} ) ON conflict({cols[0]})  DO NOTHING;""" 
-            cursor.executemany(sql_string, loader[0][1:])
+            cursor.executemany(sql_string, ld[1:])
         db.commit()
         db.close()

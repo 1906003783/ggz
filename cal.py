@@ -1,8 +1,7 @@
 import pandas as pd
 import numpy as np
-import pymysql
 import datetime
-from util import JsonLoader,dbsrh,dbexe
+from util import JsonLoader,DBProcer
 from conf import DefaultConfig
 
 #配置
@@ -11,22 +10,19 @@ cfg=cfg_c.cfg
 n_chara=cfg['n_chara']
 date_i=cfg["date_i"]
 mysql=cfg["mysql"]["config"]
+dbname=mysql.get('database')
 halo=cfg["halo"]
 
 col=tuple(cfg["col"])
 col_c=tuple(cfg["col_c"])
 
 jloader=JsonLoader(["data/m.json","data/i.json"],d_halo=halo,col=col,col_c=col_c)
+loader=jloader.export_loader()
 jloader.json2csv("data/rlt.csv")
 
 #连接数据库    
-db=pymysql.connect(host=mysql["host"],user=mysql["user"],password=mysql["password"],database=mysql["database"],local_infile=True)
-cursor=db.cursor()
-
-sql="load data local infile \"E:/cal/data/rlt.csv\" into table record character set utf8  fields terminated by ','  lines terminated by '\r\n'   ignore 1 lines;"
-dbexe(db,cursor,sql)
-sql="delete from record where chara=\"野\";"
-dbexe(db,cursor,sql)
+dbs=DBProcer("{}".format(dbname))
+dbs.json2db("records",loader)
 
 df=pd.read_csv("data/SSS.csv",encoding="utf-8")
 #pd.set_option('display.max_columns',None)
@@ -34,7 +30,7 @@ name=[c for c in df.columns]
 date_t=datetime.date(date_i[0],date_i[1],date_i[2])
 
 sql="SELECT * FROM cnt;"
-rlt= dbsrh(db,cursor,sql)
+rlt= dbs.select(sql_string=sql)
 
 
 if rlt is not None:
@@ -42,10 +38,6 @@ if rlt is not None:
     for r in rlt:
         weight[r[0]]=r[1]
 
-# 关闭不使用的游标对象
-cursor.close()
-# 关闭数据库连接
-db.close()
 
 weight=[float(weight[(name[2*i*(n_chara+1)].strip("\t"))[0]])/sum(weight.values()) for i in range(n_chara)]
 weight=np.array(weight)
