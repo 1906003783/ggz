@@ -40,7 +40,7 @@ class DBProcer():
         db.close()
 
     def create_table(self,table_name:str,cols:list):
-        sql_string = f"""CREATE TABLE IF NOT EXISTS {table_name} ({",".join(cols)});"""
+        sql_string = f"""CREATE TABLE IF NOT EXISTS {table_name} ({cols[0]+" PRIMARY KEY,"+",".join(cols[1:])});"""
         self.dbexe(sql_string)
 
     def create_view(self,view_name:str,table_name:str,day:int,cols:list):
@@ -60,7 +60,7 @@ class DBProcer():
         cursor=db.cursor()
         for ld in loader:
             format_v=','.join(['?'] * len(cols))
-            sql_string = f"""INSERT INTO {table_name} ({",".join(cols)}) VALUES ({format_v});""" 
+            sql_string = f"""INSERT INTO {table_name} ({",".join(cols)}) VALUES ({format_v} ) ON conflict({cols[0]})  DO NOTHING;""" 
             cursor.executemany(sql_string, loader[0][1:])
         db.commit()
         db.close()
