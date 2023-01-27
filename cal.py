@@ -16,7 +16,7 @@ halo=cfg["halo"]
 col=tuple(cfg["col"])
 col_c=tuple(cfg["col_c"])
 
-jloader=JsonLoader(["data/m.json","data/i.json"],d_halo=halo,col=col,col_c=col_c)
+jloader=JsonLoader(["data/m.json","data/i1.json","data/i2.json"],d_halo=halo,col=col,col_c=col_c)
 loader=jloader.export_loader()
 jloader.json2csv("data/rlt.csv")
 

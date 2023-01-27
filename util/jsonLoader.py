@@ -32,6 +32,7 @@ class JsonLoader():
     def json_proc(self,input:str,d_halo:dict,col=[],col_c=[],mode="w",encoding="utf-8") ->list:
         self.mode=mode
         self.encoding=encoding
+        self.halo=d_halo
         with open(input,'r',encoding=encoding) as f:
             datas=json.load(f)
             if mode=="w":
@@ -59,51 +60,51 @@ class JsonLoader():
                     stat2=charinfo+stat
                     col2=col+col_c
                     sdict={col2[i]:i for i in range(len(col2))}
-                    loader.append(tuple(stat2+[self.typecheck(stat=stat2,sdict=sdict,halo=d_halo)]))
+                    loader.append(tuple(stat2+[self.typecheck(stat=stat2,sdict=sdict)]))
             return loader
         
-    def typecheck(self,stat:list,sdict:list,halo:dict):
-        default="UNKHNOWN"
+    def isThisHalo(self,gname:str,bit_h:int):
+        return bit_h&2<<(self.halo[gname]-2)
+        
+    def typecheck(self,stat:list,sdict:list):
         bit_h=stat[sdict.get('bit_h')]
-        if stat[sdict.get('char')] == "冥":
-            if stat[sdict.get('weapon')] == "反叛者的刺杀弓":
-                return "刺杀冥"
-            elif stat[sdict.get('weapon')] == "狂信者的荣誉之刃":
-                return "刃冥"
-            elif stat[sdict.get('weapon')] == "荆棘盾剑":
-                return "剑盾冥"
-            else:
-                return default
-        elif stat[sdict.get('char')] == "艾":
-            if int(stat[sdict.get('spd')])<3000:
+        chara=stat[sdict.get('char')]
+        default="UNKHNOWN"+chara
+        weapon=stat[sdict.get('weapon')]
+        armor=stat[sdict.get('armor')]
+        spd=int(stat[sdict.get('spd')])
+        matk=int(stat[sdict.get('matk')])
+        if chara == "冥":
+            dMING={"反叛者的刺杀弓":"刺杀冥","狂信者的荣誉之刃":"刃冥","荆棘盾剑":"剑盾冥"}
+            return dMING.get(weapon,default)
+        elif chara == "艾":
+            if spd<3000:
                 return "低速艾"
-            elif int(stat[sdict.get('spd')])>8000:
+            elif spd>8000:
                 return "高速艾"
-            elif int(stat[sdict.get('pdef')])>4500:
+            elif spd>4500:
                 return "中速艾"
             else:
                 return "中速艾_低物防"
-        elif stat[sdict.get('char')] == "默":
-            if stat[sdict.get('weapon')] == "光辉法杖":
+        elif chara == "默":
+            if weapon == "光辉法杖":
                 return "神光默"
-            elif int(stat[sdict.get('matk')])>20000:
+            elif matk>20000:
                 return "短杖默-高穿"
             else:
                 return "短杖默-中穿"
-        elif stat[sdict.get('char')] == "命":
-            if stat[sdict.get('weapon')] == "反叛者的刺杀弓":
-                return "刺杀命"
-            else:
-                return "神枪命"
-        elif stat[sdict.get('char')] == "琳":
-            if stat[sdict.get('weapon')] == "反叛者的刺杀弓":
+        elif chara == "命":
+            dMin={"反叛者的刺杀弓":"刺杀命","饮血魔剑":"神枪命","荆棘盾剑":"低穿转盘命"}
+            return dMin.get(weapon,default)
+        elif chara == "琳":
+            if weapon == "反叛者的刺杀弓":
                 return "刺杀琳"
-            elif stat[sdict.get('weapon')] == "狂信者的荣誉之刃":
+            elif weapon == "狂信者的荣誉之刃":
                 return "沸飓琳"
-            elif stat[sdict.get('weapon')] == "幽梦匕首":
+            elif weapon == "幽梦匕首":
                 return "飓风琳"
-            elif stat[sdict.get('weapon')] == "荆棘盾剑":
-                if bit_h&2<<(halo["点到为止"]-2) and bit_h&2<<(halo["铁甲尖刺"]-2):
+            elif weapon == "荆棘盾剑":
+                if self.isThisHalo("点到为止",bit_h) and self.isThisHalo("铁甲尖刺",bit_h):
                     if int(stat[sdict.get('pdef')])>4000:
                         return "高防摆烂琳"
                     else:
@@ -112,52 +113,39 @@ class JsonLoader():
                     return "反伤琳"
             else:
                 return default
-        elif stat[sdict.get('char')] == "薇":
+        elif chara == "薇":
             if int(stat[sdict.get('mp')])>200000:
                 return "护盾薇"
+            elif self.isThisHalo("荧光护盾",bit_h):
+                return "荧飓薇"
+            elif self.isThisHalo("钝化锋芒",bit_h):
+                return "钝薇"
             else:
-                if( bit_h&2<<(halo["荧光护盾"]-2)):
-                    return "荧飓薇"
-                elif( bit_h&2<<(halo["钝化锋芒"]-2)):
-                    return "钝薇"
-                else:
-                    return default
-        elif stat[sdict.get('char')] == "希":
-            if stat[sdict.get('weapon')] == "反叛者的刺杀弓":
-                if stat[sdict.get('armor')] == "战线支撑者的荆棘重甲":
-                    return "重甲刺杀希"
-                if stat[sdict.get('armor')] == "复苏战衣":
-                    return "神木刺杀希"
-                else:
-                    return "???"
-            elif stat[sdict.get('weapon')] == "狂信者的荣誉之刃":
+                return default+"薇"
+        elif chara == "希":
+            if weapon == "反叛者的刺杀弓":
+                dXi={"战线支撑者的荆棘重甲":"重甲刺杀希","复苏战衣":"神木刺杀希"}
+                return dXi.get(armor,default)
+            elif weapon == "狂信者的荣誉之刃":
                 return "沸飓希"
-            elif stat[sdict.get('weapon')] == "荆棘盾剑":
-                if stat[sdict.get('armor')] == "战线支撑者的荆棘重甲":
-                    return "重甲摆烂希"
-                if stat[sdict.get('armor')] == "战线支撑者的荆棘重甲":
-                    return "神木摆烂希"
-            elif stat[sdict.get('weapon')] == "幽梦匕首":
+            elif weapon == "荆棘盾剑":
+                dXi={"战线支撑者的荆棘重甲":"重甲摆烂希","复苏战衣":"神木摆烂希"}
+                return dXi.get(armor,default)
+            elif weapon == "幽梦匕首":
                 return "飓风希"
             else:
                 return default
-        elif stat[sdict.get('char')] == "舞":
-            if stat[sdict.get('weapon')] == "荆棘盾剑":
-                return "摆烂舞"
-            else:
-                return "UNKNOWN"
-        elif stat[sdict.get('char')] == "伊":
-            if stat[sdict.get('weapon')] == "幽梦匕首":
-                return "飓风伊"
-            else:
-                return "UNKNOWN"
-        elif stat[sdict.get('char')] == "梦":
-            if stat[sdict.get('weapon')] == "狂信者的荣誉之刃":
-                return "刃梦"
-            if stat[sdict.get('weapon')] == "幽梦匕首":
-                return "匕首梦"
-            else:
-                return "UNKNOWN"
+        elif chara == "舞":
+            dWU={"荆棘盾剑":"摆烂舞","幽梦匕首":"飓风舞","反叛者的刺杀弓":"沸舞"}
+            return dWU.get(weapon,default)
+        elif chara == "伊":
+            dYI={"荆棘盾剑":"打野盾伊","幽梦匕首":"飓风伊","陨铁重剑":"打野神剑伊"}
+            return dYI.get(weapon,default)
+        elif chara == "梦":
+            dMeng={"幽梦匕首":"匕首梦","狂信者的荣誉之刃":"刃梦","荆棘盾剑":"摆烂梦"}
+            return dMeng.get(weapon,default)
+        else:
+            return "new card?"+default
 
 if __name__=="__main__":
     from conf import DefaultConfig
