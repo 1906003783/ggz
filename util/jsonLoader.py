@@ -2,7 +2,6 @@ import json
 import csv
 import re
 from bs4 import BeautifulSoup
-import sqlite3
 
 class JsonLoader():
     def __init__(self,inputs:list,d_halo:dict,col=[],col_c=[],encoding="utf-8") -> None:
@@ -28,13 +27,12 @@ class JsonLoader():
             writer=csv.writer(f2)
             for ld in self.loader:
                 writer.writerows(ld)
-
-    '''
+    """
     def createdb(self):
         db=sqlite3.connect(database=mysql["database"]+".db")
         cursor=db.cursor()
         table_name="records"
-        sql_string = f"""CREATE TABLE {table_name} ({",".join(self.loader[0][0])})"""
+        sql_string = f"""CREATE TABLE {table_name} ({",".join(self.loader[0][0])});"""
         cursor.execute(sql_string)
         db.commit()
         db.close()
@@ -50,8 +48,8 @@ class JsonLoader():
             cursor.executemany(sql_string, self.loader[0][1:])
         db.commit()
         db.close()
-    '''
-
+    """
+        
     def json_proc(self,input:str,d_halo:dict,col=[],col_c=[],mode="w",encoding="utf-8") ->list:
         self.mode=mode
         self.encoding=encoding
@@ -77,12 +75,15 @@ class JsonLoader():
                     bit_h=0
                     for h in s_halo:
                         bit_h+=(2**d_halo[h])
+                    charinfo=[data[c] for c in col]
                     stat=eq+w_match+[str(s_halo)]+[bit_h]
-                    loader.append(tuple([data[c] for c in col]+stat+[self.typecheck(stat=stat,col2=col_c,halo=d_halo)]))
+                    stat2=charinfo+stat
+                    col2=col+col_c
+                    sdict={col2[i]:i for i in range(len(col2))}
+                    loader.append(tuple(stat2+[self.typecheck(stat=stat2,sdict=sdict,halo=d_halo)]))
             return loader
         
-    def typecheck(self,stat:list,col2:list,halo:dict):
-        sdict={col2[i]:i for i in range(len(col2))}
+    def typecheck(self,stat:list,sdict:list,halo:dict):
         default="UNKHNOWN"
         bit_h=stat[sdict.get('bit_h')]
         if stat[sdict.get('char')] == "冥":
@@ -95,18 +96,18 @@ class JsonLoader():
             else:
                 return default
         elif stat[sdict.get('char')] == "艾":
-            if stat[sdict.get('spd')]<3000:
+            if int(stat[sdict.get('spd')])<3000:
                 return "低速艾"
-            elif stat[sdict.get('spd')]>8000:
+            elif int(stat[sdict.get('spd')])>8000:
                 return "高速艾"
-            elif stat[sdict.get('pdef')]>4500:
+            elif int(stat[sdict.get('pdef')])>4500:
                 return "中速艾"
             else:
                 return "中速艾_低物防"
         elif stat[sdict.get('char')] == "默":
             if stat[sdict.get('weapon')] == "光辉法杖":
                 return "神光默"
-            elif stat[sdict.get('matk')]>20000:
+            elif int(stat[sdict.get('matk')])>20000:
                 return "短杖默-高穿"
             else:
                 return "短杖默-中穿"
@@ -124,7 +125,7 @@ class JsonLoader():
                 return "飓风琳"
             elif stat[sdict.get('weapon')] == "荆棘盾剑":
                 if bit_h&2<<(halo["点到为止"]-2) and bit_h&2<<(halo["铁甲尖刺"]-2):
-                    if stat[sdict.get('pdef')]>4000:
+                    if int(stat[sdict.get('pdef')])>4000:
                         return "高防摆烂琳"
                     else:
                         return "低配摆烂琳"
@@ -133,7 +134,7 @@ class JsonLoader():
             else:
                 return default
         elif stat[sdict.get('char')] == "薇":
-            if stat[sdict.get('mp')]>200000:
+            if int(stat[sdict.get('mp')])>200000:
                 return "护盾薇"
             else:
                 if( bit_h&2<<(halo["荧光护盾"]-2)):
@@ -189,8 +190,13 @@ if __name__=="__main__":
     mysql=cfg["mysql"]["config"]
     halo=cfg["halo"]
 
-    col=tuple(cfg["col"])
-    col_c=tuple(cfg["col_c"])
+    col=cfg["col"]
+    col_c=cfg["col_c"]
+
     jloader=JsonLoader(["data/f.json",],d_halo=halo,col=col,col_c=col_c)
-    jloader.json2db()
+    #loader=jloader.export_loader()
+    from util import DBProcer
+    #dbs=DBProcer("tmp.ts.db")
+    #dbs.droper("table","rcd")
+    #dbs.json2db("rcd",loader)
 
