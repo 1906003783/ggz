@@ -51,9 +51,9 @@ class DBProcer():
         sql_string = f"""CREATE TABLE IF NOT EXISTS {table_name} ({cols[0]+" PRIMARY KEY,"+",".join(cols[1:])});"""
         self.dbexe(sql_string)
 
-    def create_view(self,view_name:str,table_name:str,day:int,cols:list):
+    def create_view(self,view_name:str,table_name:str,day:int,cols:list,newest:int):
         cols_s=",".join(cols)
-        sql_string=f"""CREATE VIEW IF NOT EXISTS {view_name} as select {cols_s} from (select * from {table_name} where (1674662400000-time)<{str(day*100000000)} order by time desc limit 100000) as v group by v.enemyname;"""
+        sql_string=f"""CREATE VIEW IF NOT EXISTS {view_name} as select {cols_s} from (select * from {table_name} where ({newest}-time)<{str(day*100000000)} order by time desc limit 100000) as v group by v.enemyname;"""
         self.dbexe(sql_string)
 
     def droper(self,type,name):
