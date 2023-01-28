@@ -54,7 +54,7 @@ class JsonLoader():
                     s_halo=re.findall(r"(?<=\|)[^|]\S{3}(?=|)",halo.text)
                     bit_h=0
                     for h in s_halo:
-                        bit_h+=(2**d_halo[h])
+                        bit_h|=(1<<d_halo[h])
                     charinfo=[data[c] for c in col]
                     stat=eq+w_match+[str(s_halo)]+[bit_h]
                     stat2=charinfo+stat
@@ -64,7 +64,7 @@ class JsonLoader():
             return loader
         
     def isThisHalo(self,gname:str,bit_h:int):
-        return bit_h&2<<(self.halo[gname]-2)
+        return bit_h&(1<<(self.halo[gname]))
         
     def typecheck(self,stat:list,sdict:list):
         bit_h=stat[sdict.get('bit_h')]
@@ -82,7 +82,7 @@ class JsonLoader():
                 return "低速艾"
             elif spd>8000:
                 return "高速艾"
-            elif spd>4500:
+            elif int(stat[sdict.get('pdef')])>4500:
                 return "中速艾"
             else:
                 return "中速艾_低物防"
@@ -109,6 +109,8 @@ class JsonLoader():
                         return "高防摆烂琳"
                     else:
                         return "低配摆烂琳"
+                elif self.isThisHalo("忍无可忍",bit_h):
+                    return "反伤琳_忍"
                 else:
                     return "反伤琳"
             else:
@@ -121,7 +123,7 @@ class JsonLoader():
             elif self.isThisHalo("钝化锋芒",bit_h):
                 return "钝薇"
             else:
-                return default+"薇"
+                return default
         elif chara == "希":
             if weapon == "反叛者的刺杀弓":
                 dXi={"战线支撑者的荆棘重甲":"重甲刺杀希","复苏战衣":"神木刺杀希"}
