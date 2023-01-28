@@ -30,12 +30,14 @@ name=[c for c in df.columns]
 date_t=datetime.date(date_i[0],date_i[1],date_i[2])
 
 sql_string=f"""select time from records order by time desc limit 1"""
-newest_d=dbs.select(sql_string)[0]
+newest_d=dbs.select(sql_string)[0][0]
 
 dbs.create_view("player","records",42,["enemyname","char","charlevel","type","weapon","lv_w","bracelet","lv_b","armor","lv_a","helmet","lv_h","hp","mp","spd","patk","matk","pdef","mdef","halo","bit_h" ],newest_d)
 #dbs.droper("view","type")
-sql_string=f"""create view if not exist type as select char,type \"type\",count(*) \"num\"  from player group by player.type order by char desc;"""
-dbs=dbs.dbexe(sql_string=sql_string)
+sql_string=f"""create view if not exists type as select char,type \"type\",count(*) \"num\"  from player group by player.type order by char desc;"""
+dbs.dbexe(sql_string=sql_string)
+
+dbs.dbexe(f"create view if not exists cnt as select char \"chara\",count(*) \"num\" from player group by player.char order by num DESC;")
 
 sql="SELECT * FROM cnt;"
 rlt= dbs.select(sql_string=sql)
